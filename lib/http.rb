@@ -52,6 +52,37 @@ def handle_word_search(word)
   end
 end
 
+def handle_start_game
+  @number = Random.new.rand(1..100)
+  "Good luck!"
+end
+
+def handle_game_get(guess)
+  "You have taken #{@guess_counter} guesses."
+
+  if @number > guess
+    "Your guess: #{guess} is too low."
+  elsif @number < guess
+    "Your guess: #{guess} is too high."
+  else @number == guess
+  "Your guess: #{guess} is correct!"
+  end
+end
+
+def handle_game_post(guess)
+  @guess_counter += 1
+  handle_game_get(guess)
+end
+
+# GET
+# a) how many guesses have been taken.
+# b) if a guess has been made, it tells what the guess was and whether it was too high, too low, or correct
+
+
+# POST
+# This is how we make a guess. The request includes a parameter named guess. The server stores the guess and sends the user a redirect response, causing the client to make a GET to /game.
+
+
 def handle_shut_down
   @server_should_exit = true
   "<h1>Total Requests: #{@number_of_requests}</h1>"
@@ -60,6 +91,7 @@ end
 tcp_server = TCPServer.new(9292)
 @counter = 0
 @number_of_requests = 0
+@guess_counter = 0
 @server_should_exit = false
 
 puts "Ready for a request"
@@ -69,10 +101,6 @@ puts "Ready for a request"
 until @server_should_exit
   client = tcp_server.accept
 
-  # Better as a hash?
-  # request[:verb] => "GET"
-  # request[:path] => "/"
-  # etc.
   request_lines = []
 
   while line = client.gets and !line.chomp.empty?
@@ -99,13 +127,15 @@ until @server_should_exit
   elsif path.include?('/word_search')
     word = path.split("=")[1]
     response = handle_word_search(word)
+  elsif path == '/start_game'
+    response = handle_start_game
+  elsif path.include?('/game?')
+    guess = path.split("=")[1].to_i
+    response = handle_game_post(guess)
   elsif path == '/shutdown'
     response = handle_shut_down
   end
 
-  # Send the response
-
-  # require "pry"; binding.pry
 
   puts "Sending response."
 
