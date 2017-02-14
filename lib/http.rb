@@ -1,16 +1,16 @@
 require 'socket'
-require 'my_server'
+# require 'my_server'
 
 # "Best" case scenario
 # server = MyServer.new(9292)
 # server.connect
 # server.wait_for_requests
-
 # For testing... See "Tooling" section item #3
 
 
 def handle_root(request_lines, path)
   # Would this be better as a hash?
+
   verb = request_lines[0].split[0]
   protocol = request_lines[0].split[2]
   host = request_lines[1].split(":")[1].lstrip
@@ -32,6 +32,7 @@ def handle_root(request_lines, path)
 END_OF_HEADERS
 end
 
+
 def handle_hello
   @counter += 1
   "<h1> Hello, World! (#{@counter}) </h1>"
@@ -39,6 +40,16 @@ end
 
 def handle_date_time
   "<h1>#{Time.now.strftime('%H:%M%p on %A, %B %e, %Y')}</h1>"
+end
+
+def handle_word_search(word)
+  dictionary = File.read("/usr/share/dict/words").split("\n")
+  if
+  dictionary.include?(word) == true
+    "#{word} is a known word."
+  else
+    "#{word} is not a known word."
+  end
 end
 
 def handle_shut_down
@@ -54,7 +65,7 @@ tcp_server = TCPServer.new(9292)
 puts "Ready for a request"
 
 
-
+#case when
 until @server_should_exit
   client = tcp_server.accept
 
@@ -75,19 +86,20 @@ until @server_should_exit
   @number_of_requests += 1
 
   # Switch to Ruby case statement?
+
   if path == '/favicon.ico'
     client.puts ["http/1.1 404 not-found"]
     next
   elsif path == '/'
     response = handle_root(request_lines, path)
   elsif path == '/hello'
-    # This doesn't use request_lines...
     response = handle_hello
   elsif path == '/datetime'
-    # This doesn't use request_lines...
     response = handle_date_time
+  elsif path.include?('/word_search')
+    word = path.split("=")[1]
+    response = handle_word_search(word)
   elsif path == '/shutdown'
-    # This doesn't use request_lines...
     response = handle_shut_down
   end
 
