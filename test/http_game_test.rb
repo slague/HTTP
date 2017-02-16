@@ -21,7 +21,7 @@ class GameTest < Minitest::Test
 
   def test_it_handles_game_get
     skip
-    response = Faraday.get 'http://127.0.0.1:9292/game?guess=67'
+    response = Faraday.get 'http://127.0.0.1:9292/game?guess=40'
     result = "<html><head></head><body>Your guess: 40 is too low. You have taken 1 guesses.</body></html>"
     assert_equal result, response.body
   end
