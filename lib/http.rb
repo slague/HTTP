@@ -1,4 +1,11 @@
 require 'socket'
+require './lib/root'
+require './lib/hello'
+require './lib/date_time'
+require './lib/dictionary'
+require './lib/http_game'
+
+
 
 class MyServer
 
@@ -6,78 +13,13 @@ class MyServer
 
   def initialize
     @tcp_server = TCPServer.new(9292)
-    @counter = 0
     @number_of_requests = 0
-    @guess_counter = 0
     @server_should_exit = false
-  end
-
-  def handle_root(request_lines, path)
-    # Would this be better as a hash?
-    verb = request_lines[0].split[0]
-    protocol = request_lines[0].split[2]
-    host = request_lines[1].split(":")[1].lstrip
-    port = request_lines[1].split(":")[2]
-    origin = host
-    accept = request_lines[-3].split(":")[1].lstrip
-
-    header_string = <<END_OF_HEADERS
-    <pre>
-      Verb: #{verb}
-      Path: #{path}
-      Protocol: #{protocol}
-      Host: #{host}
-      Port: #{port}
-      Origin: #{origin}
-      Accept: #{accept}
-    </pre>
-END_OF_HEADERS
-  end
-
-
-  def handle_hello
-    @counter += 1
-    "<h1> Hello, World! (#{@counter}) </h1>"
-  end
-
-
-  def handle_date_time
-    "<h1>#{Time.now.strftime('%H:%M%p on %A, %B %e, %Y')}</h1>"
-  end
-
-
-  def handle_word_search(word)
-    dictionary = File.read("/usr/share/dict/words").split("\n")
-    if
-    dictionary.include?(word.downcase) == true
-      "#{word.upcase} is a known word."
-    else
-      "#{word.upcase} is not a known word."
-    end
-  end
-
-
-  def handle_start_game
-    @number = Random.new.rand(1..100)
-    @guesses = []
-    "Good luck!"
-  end
-
-
-  def handle_game_post(content_length)
-    guess = @client.read(content_length).split("=")[1].to_i
-    @guesses << guess
-    "Recorded your guess: #{guess}. You've made these guesses #{@guesses}."
-  end
-
-  def handle_game_get
-    if @number > @guesses[-1]
-      "Your guess: #{@guesses[-1]} is too low. You have taken #{@guesses.length} guesses."
-    elsif @number < @guesses[-1]
-      "Your guess: #{@guesses[-1]} is too high. You have taken #{@guesses.length} guesses."
-    else @number ==  @guesses[-1]
-    "Your guess: #{@guesses[-1]} is correct! You have taken #{@guesses.length} guesses."
-    end
+    @game = Game.new
+    @dictionary = Dictionary.new
+    @root = Root.new
+    @hello = Hello.new
+    @date_time = DateTime.new
   end
 
 
@@ -86,26 +28,27 @@ END_OF_HEADERS
     "<h1>Total Requests: #{@number_of_requests}</h1>"
   end
 
-#Switch to Ruby case statement?
-# case path
   def determine_path(request_lines, path, verb)
     if path == '/'
-      response = handle_root(request_lines, path)
+      response = @root.handle_root(request_lines, path)
     elsif path == '/hello'
-      response = handle_hello
+      # response = handle_hello
+      response = @hello.handle_hello
     elsif path == '/datetime'
-      response = handle_date_time
+      # response = handle_date_time
+      response = @date_time.handle_date_time
     elsif path.include?('/word_search')
       word = path.split("=")[1]
-      response = handle_word_search(word)
+      response = @dictionary.word_search(word)
     elsif path == '/start_game' && verb == 'POST'
-      response = handle_start_game
+      response = @game.handle_start_game
     elsif path.include?('/game')
       if verb == 'POST'
         content_length = request_lines[3].split[1].to_i
-        response = handle_game_post(content_length)
+        guess = @client.read(content_length).split("=")[1].to_i
+        response = @game.handle_game_post(content_length, guess)
       else
-        response = handle_game_get
+        response = @game.handle_game_get
       end
     elsif path == '/shutdown'
       response = handle_shut_down
@@ -133,6 +76,7 @@ END_OF_HEADERS
       @number_of_requests += 1
 
       @response = determine_path(request_lines, @path, @verb)
+
 
       puts "Sending response."
 
